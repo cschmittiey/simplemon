@@ -19,7 +19,7 @@ def getProcessor():
         return subprocess.getoutput(['/usr/sbin/sysctl', "-n", "machdep.cpu.brand_string"]).strip()
     elif platform.system() == "Linux": 
         command = "cat /proc/cpuinfo | grep model\\ name"
-        return subprocess.getoutput(command).split(": ")[1].strip
+        return subprocess.getoutput(command).split(": ")[1].split("\n")[0].strip() #This looks pretty ugly, but it prevents "\nmodel name" appended to the result. Not terribly sure why it's doing that, but under Fedora 26 it does. Don't think it did on my server (TODO) Check output across linuxes
 
 def getRam():
     '''
@@ -36,7 +36,7 @@ def getRam():
         return subprocess.getoutput(['/usr/sbin/sysctl', "-n", "hw.memsize"]).strip() #hw.usermem and others report wrong values supposedly, but hw.memsize works.
     elif platform.system() == "Linux":
         command = "cat /proc/meminfo | grep MemTotal"
-        return subprocess.getoutput(command).split(":         ")[1].strip() #this is bad and could probably be handled better...
+        return subprocess.getoutput(command).split(":        ")[1].strip() #this is bad and could probably be handled better...
 
 print("SimpleMon")
 
