@@ -1,5 +1,20 @@
-import platform
-import subprocess
+import platform     #Platform data, such as OS type, release, etc
+import subprocess   #Used for running local console commands
+import sys          #Used to determine system python version, as we need Python 3 and not 2
+import logging      #Well, it's used for logging. Importing it as l because I'm lazy and don't want to type logging everytime.
+#Make sure we've got Python 3 here, or else weird errors will happen
+'''
+http://stackoverflow.com/questions/446052/how-can-i-check-for-python-version-in-a-program-that-uses-new-language-features
+'''
+
+req_version = (3,0)
+cur_version = sys.version_info
+
+if cur_version >= req_version:
+    pass
+else:
+    print("Your Python interpreter is too old. Simplemon requires at least Python 3.")
+    sys.exit(1) #Generally used to signify an error has occurred on Unix/POSIX systems. 
 
 def getProcessor():
     '''
@@ -37,10 +52,33 @@ def getRam():
     elif platform.system() == "Linux":
         command = "cat /proc/meminfo | grep MemTotal"
         return subprocess.getoutput(command).split(":        ")[1].strip() #this is bad and could probably be handled better...
+'''
+https://docs.python.org/3/howto/logging.html#logging-basic-tutorial
+'''
 
-print("SimpleMon")
+# create logger
+l = logging.getLogger(__name__)
+l.setLevel(logging.DEBUG)
 
-print("Getting Host Details")
+# create console handler and set level to info -- we don't want console spam.
+ch = logging.StreamHandler()
+ch.setLevel(logging.INFO)
+
+# create file handler and set level to debug
+fh = logging.FileHandler('simplemon.log')
+fh.setLevel(logging.DEBUG)
+
+# create formatter
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+# add formatter to ch
+ch.setFormatter(formatter)
+
+# add ch to logger
+l.addHandler(ch)
+
+l.info("SimpleMon")
+l.info("Getting Host Details")
 
 hostDetails = {}
 hostDetails["os"] = platform.system() + " " + platform.release() # "Windows" + " " + "7"
@@ -48,4 +86,5 @@ hostDetails["arch"] = platform.architecture()[0] # we only want 64bits or 32bits
 hostDetails["processor"] = getProcessor()
 hostDetails["ram"] = getRam()
 print(hostDetails)
+l.debug(hostDetails)
 
