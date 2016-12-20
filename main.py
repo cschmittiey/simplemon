@@ -68,16 +68,19 @@ ch.setLevel(logging.INFO)
 fh = logging.FileHandler('simplemon.log')
 fh.setLevel(logging.DEBUG)
 
-# create formatter
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# create formatters
+fileFormatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+streamFormatter = logging.Formatter('%(levelname)s - %(message)s')
 
-# add formatter to ch
-ch.setFormatter(formatter)
+# add formatter
+ch.setFormatter(streamFormatter)
+fh.setFormatter(fileFormatter)
 
-# add ch to logger
+# add to logger
 l.addHandler(ch)
+l.addHandler(fh)
 
-l.info("SimpleMon")
+l.info("Starting SimpleMon")
 l.info("Getting Host Details")
 
 hostDetails = {}
@@ -85,6 +88,5 @@ hostDetails["os"] = platform.system() + " " + platform.release() # "Windows" + "
 hostDetails["arch"] = platform.architecture()[0] # we only want 64bits or 32bits
 hostDetails["processor"] = getProcessor()
 hostDetails["ram"] = getRam()
-print(hostDetails)
 l.debug(hostDetails)
 
