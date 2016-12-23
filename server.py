@@ -1,6 +1,6 @@
-import psycopg2     #for database wrangling
-import configparser #for importing configurations for db
-import logging      #for logging everything!
+import psycopg2      # for database wrangling
+import configparser  # for importing configurations for db
+import logging       # for logging everything!
 '''
 https://docs.python.org/3/howto/logging.html#logging-basic-tutorial
 '''
@@ -37,10 +37,10 @@ https://wiki.postgresql.org/wiki/Psycopg2_Tutorial
 '''
 try:
     db = psycopg2.connect("dbname={0} user={1} password={2} host={3} port={4}".format(config['database']['dbname'],
-                                                                                       config['database']['dbusername'],
-                                                                                       config['database']['dbpassword'],
-                                                                                       config['database']['dbhost'],
-                                                                                       config['database']['dbport']))
+                                                                                      config['database']['dbusername'],
+                                                                                      config['database']['dbpassword'],
+                                                                                      config['database']['dbhost'],
+                                                                                      config['database']['dbport']))
 except:
     l.fatal("Can't connect to the database. Check your config, that postgres is running, and that you have access to the database.")
 
