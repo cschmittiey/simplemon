@@ -56,7 +56,7 @@ def getRam():
 def getID()
     '''
     So the idea here is to get a hardware based UUID, we don't want a random one.
-    UUID 1 seems to do the trick, however the first part of it changes every time it's generated/read, so I'm only going to use the last chunk of it.
+    UUID 1 seems to do the trick, however the first part of it changes every time it's generated/read (I think it's time based), so I'm only going to use the last chunk of it.
     That still allows for a pretty good amount of unique machines
     '''
     return(uuid.uuid1().urn.split("-")[4]) #returns something like this: '8c705a21d8fc'
