@@ -1,6 +1,7 @@
 import psycopg2      # for database wrangling
 import configparser  # for importing configurations for db
 import logging       # for logging everything!
+import sys           # for exiting
 '''
 https://docs.python.org/3/howto/logging.html#logging-basic-tutorial
 '''
@@ -43,12 +44,23 @@ try:
                                                                                       config['database']['dbport']))
 except:
     l.fatal("Can't connect to the database. Check your config, that postgres is running, and that you have access to the database.")
+    sys.exit(1)
 
 cur = db.cursor()
 
-try:
-    cur.execute("CREATE TABLE nodes (id serial PRIMARY KEY, uuid text, hostname text);")
-    db.commit()
-    l.debug("Table 'nodes' doesn't exist, creating now")
-except:
-    l.debug("Table 'nodes' already exists, not creating")
+
+def createTable(arg, carefullyFormattedSqlVariables):
+    '''
+    http://initd.org/psycopg/docs/usage.html#passing-parameters-to-sql-queries
+    Generally, we shouldn't use string concatenation/formatting to pass things into psycopg2. however, this is an exception to the rule.
+    '''
+    sql = "CREATE TABLE {} {};".format(arg, carefullyFormattedSqlVariables)
+    try:
+        cur.execute(sql)
+        db.commit()
+        l.debug("Table '{}' doesn't exist, creating now".format(arg))
+    except:
+        l.debug("Either Table '{}' already exists, or something else went wrong.".format(arg))
+
+createTable("nodes", "(id serial PRIMARY KEY, uuid text, hostname text)")
+createTable("services", "(id serial PRIMARY KEY, node_id int REFERENCES nodes (id) ON DELETE CASCADE, type text)")
