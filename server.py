@@ -52,7 +52,8 @@ cur = db.cursor()
 def createTable(arg, carefullyFormattedSqlVariables):
     '''
     http://initd.org/psycopg/docs/usage.html#passing-parameters-to-sql-queries
-    Generally, we shouldn't use string concatenation/formatting to pass things into psycopg2. however, this is an exception to the rule.
+    Generally, we shouldn't use string concatenation/formatting to pass things into psycopg2.
+    however, this is an exception to the rule, because it's the name of a table, not data being inserted into the db.
     '''
     sql = "CREATE TABLE {} {};".format(arg, carefullyFormattedSqlVariables)
     try:
