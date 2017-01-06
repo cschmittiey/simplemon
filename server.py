@@ -49,11 +49,29 @@ except:
 cur = db.cursor()
 
 
+def insertNode(uuid, hostname):
+    '''
+    http://initd.org/psycopg/docs/usage.html
+    '''
+    if (isinstance(uuid, str) and isinstance(hostname, str)):
+        cur.execute("INSERT INTO nodes (id, uuid, hostname) VALUES (DEFAULT, %s, %s)", (uuid, hostname))
+        db.commit()
+
+
+def insertService(node, type):
+    '''
+    http://initd.org/psycopg/docs/usage.html
+    '''
+    if (isinstance(node, int) and isinstance(type, str)):
+        cur.execute("INSERT INTO services (id, node_id, type) VALUES (DEFAULT, %s, %s)", (node, type))
+        db.commit()
+
+
 def createTable(arg, carefullyFormattedSqlVariables):
     '''
     http://initd.org/psycopg/docs/usage.html#passing-parameters-to-sql-queries
-    Generally, we shouldn't use string concatenation/formatting to pass things into psycopg2.
-    however, this is an exception to the rule, because it's the name of a table, not data being inserted into the db.
+    Generally, we should not use string concatenation/formatting to pass things into psycopg2.
+    however, this is an exception to the rule, because it is the name of a table, not data being inserted into the db.
     '''
     sql = "CREATE TABLE {} {};".format(arg, carefullyFormattedSqlVariables)
     try:
@@ -62,6 +80,29 @@ def createTable(arg, carefullyFormattedSqlVariables):
         l.debug("Table '{}' doesn't exist, creating now".format(arg))
     except:
         l.debug("Either Table '{}' already exists, or something else went wrong.".format(arg))
+        db.rollback()
 
 createTable("nodes", "(id serial PRIMARY KEY, uuid text, hostname text)")
 createTable("services", "(id serial PRIMARY KEY, node_id int REFERENCES nodes (id) ON DELETE CASCADE, type text)")
+
+
+'''
+Alrighty, so we're gonna start out with some test data here
+'''
+
+insertNode("a", "a")
+insertNode("b", "b")
+insertNode("c", "c")
+insertNode("d", "d")
+insertService(1, "memes")
+insertService(2, "http")
+insertService(3, "db")
+insertService(4, "http")
+
+
+# Make the changes to the database persistent
+db.commit()
+
+# Close communication with the database
+cur.close()
+db.close()

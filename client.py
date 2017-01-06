@@ -2,6 +2,7 @@ import platform     # Platform data, such as OS type, release, etc
 import subprocess   # Used for running local console commands
 import sys          # Used to determine system python version, as we need Python 3 and not 2
 import logging      # Well, it's used for logging. Importing it as l because I'm lazy and don't want to type logging everytime.
+import uuid         # to distinguish hosts
 
 # Make sure we've got Python 3 here, or else weird errors will happen
 '''

@@ -8,3 +8,8 @@ Features:
  - time series graphs of data
  - alerts via email of downtime
  - written in python for portability/adaptability
+
+Requirements:
+ - PostgreSQL server
+ - python
+ - Mac OS X, Linux 3 or higher, Windows 7 or higher
