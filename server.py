@@ -80,6 +80,7 @@ def createTable(arg, carefullyFormattedSqlVariables):
         l.debug("Table '{}' doesn't exist, creating now".format(arg))
     except:
         l.debug("Either Table '{}' already exists, or something else went wrong.".format(arg))
+        db.rollback()
 
 createTable("nodes", "(id serial PRIMARY KEY, uuid text, hostname text)")
 createTable("services", "(id serial PRIMARY KEY, node_id int REFERENCES nodes (id) ON DELETE CASCADE, type text)")
