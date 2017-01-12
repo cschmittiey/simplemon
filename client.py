@@ -3,6 +3,12 @@ import subprocess   # Used for running local console commands
 import sys          # Used to determine system python version, as we need Python 3 and not 2
 import logging      # Well, it's used for logging. Importing it as l because I'm lazy and don't want to type logging everytime.
 import uuid         # to distinguish hosts
+from tornado.ioloop import IOLoop  # all the tornado stuff is networking
+from tornado import gen
+from tornado.tcpclient import TCPClient
+import ssl          # for encrypted netwoorking
+import os           # useful for finding current directory across OSes.
+import json         # for encoding network traffic in a sane format
 
 # Make sure we've got Python 3 here, or else weird errors will happen
 '''
@@ -104,3 +110,30 @@ hostDetails["ram"] = getRam()
 hostDetails["id"] = getID()  # need a unique identifier for each machine!
 hostDetails["hostname"] = platform.node()  # gets the hostname
 l.debug(hostDetails)
+
+'''
+https://docs.python.org/3/library/ssl.html#ssl.SSLContext
+http://stackoverflow.com/questions/19268548/python-ignore-certicate-validation-urllib2
+http://www.tornadoweb.org/en/stable/tcpserver.html
+https://gist.github.com/weaver/293449
+'''
+ssl_ctx = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
+ssl_ctx.load_cert_chain(os.path.join(os.getcwd(), "server.crt"),
+                        os.path.join(os.getcwd(), "server.key"))
+ssl_ctx.check_hostname = False
+ssl_ctx.verify_mode = ssl.CERT_NONE
+
+stuffToSend = b"" + json.dumps(hostDetails).encode() + b"\n"
+
+
+@gen.coroutine
+def send_message():
+    stream = yield TCPClient().connect("localhost", 8888, ssl_options=ssl_ctx)
+    yield stream.write(stuffToSend)
+    print("Sent to server:", )
+    reply = yield stream.read_until(b"\n")
+    print("Response from server:", reply.decode().strip())
+
+
+if __name__ == "__main__":
+    IOLoop.current().run_sync(send_message)

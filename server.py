@@ -2,12 +2,20 @@ import psycopg2      # for database wrangling
 import configparser  # for importing configurations for db
 import logging       # for logging everything!
 import sys           # for exiting
+import json          # for sending stuff over the network
+from tornado.tcpserver import TCPServer
+from tornado.iostream import StreamClosedError
+from tornado import gen
+import tornado
+import ssl
+import os
+
 '''
 https://docs.python.org/3/howto/logging.html#logging-basic-tutorial
 '''
 
 # create logger
-l = logging.getLogger('client')
+l = logging.getLogger('server')
 l.setLevel(logging.DEBUG)
 
 # create console handler and set level to info -- we don't want console spam.
@@ -99,6 +107,41 @@ insertService(2, "http")
 insertService(3, "db")
 insertService(4, "http")
 
+'''
+Here comes the networking! Now that we've got it talking to the database, and logging,
+we're ready to network with client applications and recieve time-series data and node info.
+
+
+https://docs.python.org/3/library/ssl.html#ssl.SSLContext
+http://stackoverflow.com/questions/19268548/python-ignore-certicate-validation-urllib2
+http://www.tornadoweb.org/en/stable/tcpserver.html
+https://gist.github.com/weaver/293449
+
+'''
+ssl_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+ssl_ctx.load_cert_chain(os.path.join(os.getcwd(), "server.crt"),
+                        os.path.join(os.getcwd(), "server.key"))
+
+
+class EchoServer(TCPServer):
+    @gen.coroutine
+    def handle_stream(self, stream, address):
+        while True:
+            try:
+                data = yield stream.read_until(b"\n")
+                print("Received bytes: %s", data)
+                if not data.endswith(b"\n"):
+                    data = data + b"\n"
+                yield stream.write(data)
+            except StreamClosedError:
+                print("Lost client at host %s", address[0])
+                break
+            except Exception as e:
+                print(e)
+
+server = EchoServer(ssl_options=ssl_ctx)
+server.listen(8888)
+tornado.ioloop.IOLoop.current().start()
 
 # Make the changes to the database persistent
 db.commit()
