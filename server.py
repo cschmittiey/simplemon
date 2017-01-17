@@ -108,6 +108,16 @@ insertService(3, "db")
 insertService(4, "http")
 
 '''
+I should get a list of nodes already so we don't add a duplicate one below.
+'''
+cur.execute("SELECT uuid FROM nodes;")
+nodeList = cur.fetchall()
+
+newNodeList = []
+for element in nodeList:
+    newNodeList.append(element[0])
+
+'''
 Here comes the networking! Now that we've got it talking to the database, and logging,
 we're ready to network with client applications and recieve time-series data and node info.
 
