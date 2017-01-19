@@ -95,19 +95,6 @@ createTable("services", "(id serial PRIMARY KEY, node_id int REFERENCES nodes (i
 
 
 '''
-Alrighty, so we're gonna start out with some test data here
-'''
-
-insertNode("a", "a")
-insertNode("b", "b")
-insertNode("c", "c")
-insertNode("d", "d")
-insertService(1, "memes")
-insertService(2, "http")
-insertService(3, "db")
-insertService(4, "http")
-
-'''
 I should get a list of nodes already so we don't add a duplicate one below.
 '''
 cur.execute("SELECT uuid FROM nodes;")
@@ -128,6 +115,23 @@ http://www.tornadoweb.org/en/stable/tcpserver.html
 https://gist.github.com/weaver/293449
 
 '''
+
+
+def processHostDetails(data):
+    '''
+    Data comes in from the server stream, as bytes, representing a json dict.
+    '''
+    hostDetails = json.loads(data.decode().strip())
+    l.debug("Received host details for node " + hostDetails['id'] + " " + hostDetails['hostname'])
+    if hostDetails['id'] in newNodeList:
+        return(b"Node is already registered\n")
+        l.info("Node is already registered")
+    else:
+        insertNode(hostDetails['id'], hostDetails['hostname'])
+        newNodeList.append(hostDetails['id'])
+        l.info("Node" + hostDetails['id'] + " " + hostDetails['hostname'] + " added")
+        return(b"Node added\n")
+
 ssl_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
 ssl_ctx.load_cert_chain(os.path.join(os.getcwd(), "server.crt"),
                         os.path.join(os.getcwd(), "server.key"))
@@ -140,6 +144,8 @@ class EchoServer(TCPServer):
             try:
                 data = yield stream.read_until(b"\n")
                 print("Received bytes: %s", data)
+                if data.startswith(b"{"):
+                    yield stream.write(processHostDetails(data))
                 if not data.endswith(b"\n"):
                     data = data + b"\n"
                 yield stream.write(data)
