@@ -120,9 +120,11 @@ https://gist.github.com/weaver/293449
 def processHostDetails(data):
     '''
     Data comes in from the server stream, as bytes, representing a json dict.
+    We want to avoid adding duplicate nodes, so each node calculates a UUID based on it's hardware,
+    and transmits it with it's hostDetails, so that we can avoid duplicate DB entries.
     '''
     hostDetails = json.loads(data.decode().strip())
-    l.debug("Received host details for node " + hostDetails['id'] + " " + hostDetails['hostname'])
+    l.info("Received host details for node " + hostDetails['id'] + " " + hostDetails['hostname'])
     if hostDetails['id'] in newNodeList:
         return(b"Node is already registered\n")
         l.info("Node is already registered")
@@ -143,14 +145,14 @@ class EchoServer(TCPServer):
         while True:
             try:
                 data = yield stream.read_until(b"\n")
-                print("Received bytes: %s", data)
+                l.debug("Received bytes: %s", data)
                 if data.startswith(b"{"):
                     yield stream.write(processHostDetails(data))
                 if not data.endswith(b"\n"):
                     data = data + b"\n"
                 yield stream.write(data)
             except StreamClosedError:
-                print("Lost client at host %s", address[0])
+                l.debug("Lost client at host %s", address[0])
                 break
             except Exception as e:
                 print(e)
