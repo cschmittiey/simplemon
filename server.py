@@ -16,26 +16,19 @@ https://docs.python.org/3/howto/logging.html#logging-basic-tutorial
 
 # create logger
 l = logging.getLogger('server')
-l.setLevel(logging.DEBUG)
-
-# create console handler and set level to info -- we don't want console spam.
-ch = logging.StreamHandler()
-ch.setLevel(logging.INFO)
+l.setLevel(logging.INFO)
 
 # create file handler and set level to debug
 fh = logging.FileHandler('server.log')
 fh.setLevel(logging.DEBUG)
 
-# create formatters
+# create formatter
 fileFormatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-streamFormatter = logging.Formatter('%(levelname)s - %(message)s')
 
 # add formatter
-ch.setFormatter(streamFormatter)
 fh.setFormatter(fileFormatter)
 
 # add to logger
-l.addHandler(ch)
 l.addHandler(fh)
 
 l.debug("Reading Config")

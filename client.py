@@ -77,26 +77,19 @@ https://docs.python.org/3/howto/logging.html#logging-basic-tutorial
 
 # create logger
 l = logging.getLogger('client')
-l.setLevel(logging.DEBUG)
-
-# create console handler and set level to info -- we don't want console spam.
-ch = logging.StreamHandler()
-ch.setLevel(logging.INFO)
+l.setLevel(logging.INFO)
 
 # create file handler and set level to debug
 fh = logging.FileHandler('client.log')
 fh.setLevel(logging.DEBUG)
 
-# create formatters
+# create formatter
 fileFormatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-streamFormatter = logging.Formatter('%(levelname)s - %(message)s')
 
 # add formatter
-ch.setFormatter(streamFormatter)
 fh.setFormatter(fileFormatter)
 
 # add to logger
-l.addHandler(ch)
 l.addHandler(fh)
 
 l.info("Starting SimpleMon")
@@ -130,9 +123,9 @@ stuffToSend = b"" + json.dumps(hostDetails).encode() + b"\n"
 def send_message():
     stream = yield TCPClient().connect("localhost", 8888, ssl_options=ssl_ctx)
     yield stream.write(stuffToSend)
-    print("Sent to server:", )
+    l.debug("Sent to server: " + stuffToSend.decode().strip())
     reply = yield stream.read_until(b"\n")
-    print("Response from server:", reply.decode().strip())
+    l.info("Response from server: " + reply.decode().strip())
 
 
 if __name__ == "__main__":
