@@ -9,6 +9,8 @@ from tornado.tcpclient import TCPClient
 import ssl          # for encrypted netwoorking
 import os           # useful for finding current directory across OSes.
 import json         # for encoding network traffic in a sane format
+from apscheduler.schedulers.tornado import TornadoScheduler   # for multiprocess CPU and RAM utilization grabbing
+import psutil       # for getting RAM usage
 
 # Make sure we've got Python 3 here, or else weird errors will happen
 '''
@@ -72,6 +74,17 @@ def getID():
     return(uuid.uuid1().urn.split("-")[4])  # returns something like this: '8c705a21d8fc'
 
 
+def getUsedRam():
+    '''
+    http://stackoverflow.com/questions/3393612/run-certain-code-every-n-seconds
+    http://stackoverflow.com/questions/276052/how-to-get-current-cpu-and-ram-usage-in-python
+    '''
+    l.info("Getting used RAM")
+    memory = psutil.virtual_memory()
+    return(memory.used)
+    l.info(memory.used)
+
+
 '''
 https://docs.python.org/3/howto/logging.html#logging-basic-tutorial
 '''
@@ -112,16 +125,14 @@ http://www.tornadoweb.org/en/stable/tcpserver.html
 https://gist.github.com/weaver/293449
 '''
 ssl_ctx = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
-ssl_ctx.load_cert_chain(os.path.join(os.getcwd(), "server.crt"),
-                        os.path.join(os.getcwd(), "server.key"))
+ssl_ctx.load_cert_chain(os.path.join(os.getcwd(), "client.crt"),
+                        os.path.join(os.getcwd(), "client.key"))
 ssl_ctx.check_hostname = False
 ssl_ctx.verify_mode = ssl.CERT_NONE
 
-stuffToSend = b"" + json.dumps(hostDetails).encode() + b"\n"
-
 
 @gen.coroutine
-def send_message():
+def send_message(stuffToSend):
     stream = yield TCPClient().connect("localhost", 8888, ssl_options=ssl_ctx)
     yield stream.write(stuffToSend)
     l.debug("Sent to server: " + stuffToSend.decode().strip())
@@ -129,5 +140,13 @@ def send_message():
     l.info("Response from server: " + reply.decode().strip())
 
 
+sched = TornadoScheduler()
+
 if __name__ == "__main__":
-    IOLoop.current().run_sync(send_message)
+    '''
+    http://stackoverflow.com/questions/3393612/run-certain-code-every-n-seconds
+    '''
+    sched.add_job(getUsedRam, 'interval', seconds=1)
+    sched.start()
+    IOLoop.current().run_sync(lambda: send_message(b"" + json.dumps(hostDetails).encode() + b"\n"))  # send off the host details.
+    IOLoop.current().run_sync(lambda: send_message(b"memes" + b"\n"))
