@@ -125,11 +125,11 @@ def processHostDetails(data):
     else:
         insertNode(hostDetails['id'], hostDetails['hostname'])
         newNodeList.append(hostDetails['id'])
-        l.info("Node" + hostDetails['id'] + " " + hostDetails['hostname'] + " added")
+        l.info("Node " + hostDetails['id'] + " " + hostDetails['hostname'] + " added")
         return(b"Node added\n")
 
 
-ssl_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)l
+ssl_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
 ssl_ctx.load_cert_chain(os.path.join(os.getcwd(), "server.crt"),
                         os.path.join(os.getcwd(), "server.key"))
 
@@ -143,9 +143,11 @@ class EchoServer(TCPServer):
                 l.debug("Received bytes: %s", data)
                 if data.startswith(b"{"):
                     yield stream.write(processHostDetails(data))
+                else:
+                    l.info(data)
+                    yield stream.write(b"ok\n")
                 if not data.endswith(b"\n"):
                     data = data + b"\n"
-                yield stream.write(data)
             except StreamClosedError:
                 l.debug("Lost client at host %s", address[0])
                 break
