@@ -71,6 +71,7 @@ def getID():
     '''
     return(uuid.uuid1().urn.split("-")[4])  # returns something like this: '8c705a21d8fc'
 
+
 '''
 https://docs.python.org/3/howto/logging.html#logging-basic-tutorial
 '''

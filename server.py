@@ -83,6 +83,7 @@ def createTable(arg, carefullyFormattedSqlVariables):
         l.debug("Either Table '{}' already exists, or something else went wrong.".format(arg))
         db.rollback()
 
+
 createTable("nodes", "(id serial PRIMARY KEY, uuid text, hostname text)")
 createTable("services", "(id serial PRIMARY KEY, node_id int REFERENCES nodes (id) ON DELETE CASCADE, type text)")
 
@@ -127,7 +128,8 @@ def processHostDetails(data):
         l.info("Node" + hostDetails['id'] + " " + hostDetails['hostname'] + " added")
         return(b"Node added\n")
 
-ssl_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+
+ssl_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)l
 ssl_ctx.load_cert_chain(os.path.join(os.getcwd(), "server.crt"),
                         os.path.join(os.getcwd(), "server.key"))
 
@@ -149,6 +151,7 @@ class EchoServer(TCPServer):
                 break
             except Exception as e:
                 print(e)
+
 
 server = EchoServer(ssl_options=ssl_ctx)
 server.listen(8888)
