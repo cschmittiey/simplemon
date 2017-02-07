@@ -9,7 +9,7 @@ from tornado.tcpclient import TCPClient
 import ssl          # for encrypted netwoorking
 import os           # useful for finding current directory across OSes.
 import json         # for encoding network traffic in a sane format
-from apscheduler.schedulers.blocking import BlockingScheduler   # for multiprocess CPU and RAM utilization grabbing
+from apscheduler.schedulers.tornado import TornadoScheduler   # for multiprocess CPU and RAM utilization grabbing
 import psutil       # for getting RAM usage
 import datetime     # for timestamps
 
@@ -90,6 +90,21 @@ def getUsedRam():
     l.info(temp)
 
 
+def getUsedCpu():
+    '''
+    http://stackoverflow.com/questions/3393612/run-certain-code-every-n-seconds
+    http://stackoverflow.com/questions/276052/how-to-get-current-cpu-and-ram-usage-in-python
+    '''
+    l.info("Getting used CPU")
+    cpu = psutil.cpu_percent()
+    temp = {}
+    temp['usedCpu'] = cpu
+    temp['id'] = getID()
+    temp['timestamp'] = datetime.datetime.now().isoformat()
+    return temp
+    l.info(temp)
+
+
 '''
 https://docs.python.org/3/howto/logging.html#logging-basic-tutorial
 '''
@@ -145,12 +160,18 @@ def send_message(stuffToSend):
     l.info("Response from server: " + reply.decode().strip())
 
 
-sched = BlockingScheduler()
+sched = TornadoScheduler()
 
 if __name__ == "__main__":
     '''
     http://stackoverflow.com/questions/3393612/run-certain-code-every-n-seconds
     '''
-    IOLoop.current().run_sync(lambda: send_message(b"hostDetails#" + json.dumps(hostDetails).encode() + b"\n"))  # send off the host details.
-    sched.add_job(lambda: IOLoop.current().run_sync(lambda: send_message(b"ram#" + json.dumps(getUsedRam()).encode() + b"\n")), 'interval', seconds=3)  # yeah this line is lambda hell. There's definitely a better way to do this, but in the interest of time, I'm doing it this way.
+    send_message(b"hostDetails#" + json.dumps(hostDetails).encode() + b"\n")  # send off the host details.
+    sched.add_job(lambda: send_message(b"ram#" + json.dumps(getUsedRam()).encode() + b"\n"), 'interval', seconds=10)  # yeah this line is lambda hell. There's definitely a better way to do this, but in the interest of time, I'm doing it this way.
+    sched.add_job(lambda: send_message(b"cpu#" + json.dumps(getUsedCpu()).encode() + b"\n"), 'interval', seconds=10)
     sched.start()
+    print('Press Ctrl+{0} to exit'.format('Break' if os.name == 'nt' else 'C'))
+    try:
+        IOLoop.instance().start()
+    except (KeyboardInterrupt, SystemExit):
+        pass

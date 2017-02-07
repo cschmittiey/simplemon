@@ -75,15 +75,18 @@ def insertMeasurement(table, node, time, measurement):
             db.commit()
         else:
             l.warn("Someone's trying to insert data for a node that doesn't exist.")
-    if table == 'cpu'
+            l.warn(table + " " + node + " " + time + " " + measurement)
+    elif table == 'cpu':
         if node in newNodeList:
             cur.execute("INSERT INTO cpu (id, node_id, measurementTime, percentage) VALUES (DEFAULT, %s, %s, %s)", (node, time, measurement))
             db.commit
         else:
             l.warn("Someone's trying to insert data for a node that doesn't exist.")
+            l.warn(table + " " + node + " " + time + " " + measurement)
     else:
         l.warn("Somone's trying to insert data into a table that doesn't exist.")
-
+        l.warn(table + " " + node + " " + time + " " + str(measurement))
+        l.warn(type(table))
 
 
 def createTable(arg, carefullyFormattedSqlVariables):
@@ -161,6 +164,17 @@ def processRam(data):
     return(b'Measurement Added\n')
 
 
+def processCpu(data):
+    '''
+    Gotta get the json+bytes string back to a database with a datetime timestamp,
+    and then add the data point to the database.
+    This should be very similar to processHostDetails().
+    '''
+    usedCpu = json.loads(data.decode().strip())
+    insertMeasurement("cpu", usedCpu['id'], usedCpu['timestamp'], usedCpu['usedCpu'])
+    return(b'Measurement Added\n')
+
+
 ssl_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
 ssl_ctx.load_cert_chain(os.path.join(os.getcwd(), "server.crt"),
                         os.path.join(os.getcwd(), "server.key"))
@@ -178,6 +192,8 @@ class EchoServer(TCPServer):
                     yield stream.write(processHostDetails(data[1]))
                 elif data[0] == b"ram":
                     yield stream.write(processRam(data[1]))
+                elif data[0] == b"cpu":
+                    yield stream.write(processCpu(data[1]))
                 else:
                     yield stream.write(b"ok\n")
                 if not data[1].endswith(b"\n"):
