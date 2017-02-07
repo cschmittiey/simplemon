@@ -85,7 +85,7 @@ def getUsedRam():
     temp = {}
     temp['usedRam'] = memory.percent
     temp['id'] = getID()
-    temp['timestamp'] = datetime.datetime.now().isoformat(' ')
+    temp['timestamp'] = datetime.datetime.now().isoformat()
     return temp
     l.info(temp)
 
