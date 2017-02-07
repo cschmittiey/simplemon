@@ -9,7 +9,7 @@ from tornado import gen
 import tornado
 import ssl
 import os
-
+import datetime
 '''
 https://docs.python.org/3/howto/logging.html#logging-basic-tutorial
 '''
@@ -68,6 +68,24 @@ def insertService(node, type):
         db.commit()
 
 
+def insertMeasurement(table, node, time, measurement):
+    if table == 'ram':
+        if node in newNodeList:
+            cur.execute("INSERT INTO ram (id, node_id, measurementTime, percentage) VALUES (DEFAULT, %s, %s, %s)", (node, time, measurement))
+            db.commit()
+        else:
+            l.warn("Someone's trying to insert data for a node that doesn't exist.")
+    if table == 'cpu'
+        if node in newNodeList:
+            cur.execute("INSERT INTO cpu (id, node_id, measurementTime, percentage) VALUES (DEFAULT, %s, %s, %s)", (node, time, measurement))
+            db.commit
+        else:
+            l.warn("Someone's trying to insert data for a node that doesn't exist.")
+    else:
+        l.warn("Somone's trying to insert data into a table that doesn't exist.")
+
+
+
 def createTable(arg, carefullyFormattedSqlVariables):
     '''
     http://initd.org/psycopg/docs/usage.html#passing-parameters-to-sql-queries
@@ -78,19 +96,22 @@ def createTable(arg, carefullyFormattedSqlVariables):
     try:
         cur.execute(sql)
         db.commit()
-        l.debug("Table '{}' doesn't exist, creating now".format(arg))
+        l.info("Table '{}' doesn't exist, creating now".format(arg))
     except:
-        l.debug("Either Table '{}' already exists, or something else went wrong.".format(arg))
+        l.info("Either Table '{}' already exists, or something else went wrong.".format(arg))
         db.rollback()
 
 
-createTable("nodes", "(id serial PRIMARY KEY, uuid text, hostname text)")
+createTable("nodes", "(id serial PRIMARY KEY, uuid text UNIQUE, hostname text)")
 createTable("services", "(id serial PRIMARY KEY, node_id int REFERENCES nodes (id) ON DELETE CASCADE, type text)")
+createTable("ram", "(id serial PRIMARY KEY, node_id text REFERENCES nodes (uuid) ON DELETE CASCADE, measurementTime timestamp, percentage real)")
+createTable("cpu", "(id serial PRIMARY KEY, node_id text REFERENCES nodes (uuid) ON DELETE CASCADE, measurementTime timestamp, percentage real)")
 
 
 '''
 I should get a list of nodes already so we don't add a duplicate one below.
 '''
+
 cur.execute("SELECT uuid FROM nodes;")
 nodeList = cur.fetchall()
 
@@ -129,6 +150,17 @@ def processHostDetails(data):
         return(b"Node added\n")
 
 
+def processRam(data):
+    '''
+    Gotta get the json+bytes string back to a database with a datetime timestamp,
+    and then add the data point to the database.
+    This should be very similar to processHostDetails().
+    '''
+    usedRam = json.loads(data.decode().strip())
+    insertMeasurement("ram", usedRam['id'], usedRam['timestamp'], usedRam['usedRam'])
+    return(b'Measurement Added\n')
+
+
 ssl_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
 ssl_ctx.load_cert_chain(os.path.join(os.getcwd(), "server.crt"),
                         os.path.join(os.getcwd(), "server.key"))
@@ -145,7 +177,7 @@ class EchoServer(TCPServer):
                 if data[0] == b"hostDetails":
                     yield stream.write(processHostDetails(data[1]))
                 elif data[0] == b"ram":
-                    yield stream.write(data[1])
+                    yield stream.write(processRam(data[1]))
                 else:
                     yield stream.write(b"ok\n")
                 if not data[1].endswith(b"\n"):
