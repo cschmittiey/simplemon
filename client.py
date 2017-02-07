@@ -9,8 +9,9 @@ from tornado.tcpclient import TCPClient
 import ssl          # for encrypted netwoorking
 import os           # useful for finding current directory across OSes.
 import json         # for encoding network traffic in a sane format
-from apscheduler.schedulers.tornado import TornadoScheduler   # for multiprocess CPU and RAM utilization grabbing
+from apscheduler.schedulers.blocking import BlockingScheduler   # for multiprocess CPU and RAM utilization grabbing
 import psutil       # for getting RAM usage
+import datetime     # for timestamps
 
 # Make sure we've got Python 3 here, or else weird errors will happen
 '''
@@ -81,8 +82,12 @@ def getUsedRam():
     '''
     l.info("Getting used RAM")
     memory = psutil.virtual_memory()
-    return(memory.used)
-    l.info(memory.used)
+    temp = {}
+    temp['usedRam'] = memory.percent
+    temp['id'] = getID()
+    temp['timestamp'] = datetime.datetime.now().isoformat(' ')
+    return temp
+    l.info(temp)
 
 
 '''
@@ -140,13 +145,12 @@ def send_message(stuffToSend):
     l.info("Response from server: " + reply.decode().strip())
 
 
-sched = TornadoScheduler()
+sched = BlockingScheduler()
 
 if __name__ == "__main__":
     '''
     http://stackoverflow.com/questions/3393612/run-certain-code-every-n-seconds
     '''
-    sched.add_job(getUsedRam, 'interval', seconds=1)
-    sched.start()
     IOLoop.current().run_sync(lambda: send_message(b"" + json.dumps(hostDetails).encode() + b"\n"))  # send off the host details.
-    IOLoop.current().run_sync(lambda: send_message(b"memes" + b"\n"))
+    sched.add_job(lambda: IOLoop.current().run_sync(lambda: send_message(b"" + json.dumps(getUsedRam()).encode() + b"\n")), 'interval', seconds=3)  # yeah this line is lambda hell. There's definitely a better way to do this, but in the interest of time, I'm doing it this way.
+    sched.start()
