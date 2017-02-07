@@ -141,12 +141,14 @@ class EchoServer(TCPServer):
             try:
                 data = yield stream.read_until(b"\n")
                 l.debug("Received bytes: %s", data)
-                if data.startswith(b"{"):
-                    yield stream.write(processHostDetails(data))
+                data = data.split(b"#")
+                if data[0] == b"hostDetails":
+                    yield stream.write(processHostDetails(data[1]))
+                elif data[0] == b"ram":
+                    yield stream.write(data[1])
                 else:
-                    l.info(data)
                     yield stream.write(b"ok\n")
-                if not data.endswith(b"\n"):
+                if not data[1].endswith(b"\n"):
                     data = data + b"\n"
             except StreamClosedError:
                 l.debug("Lost client at host %s", address[0])

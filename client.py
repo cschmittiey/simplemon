@@ -151,6 +151,6 @@ if __name__ == "__main__":
     '''
     http://stackoverflow.com/questions/3393612/run-certain-code-every-n-seconds
     '''
-    IOLoop.current().run_sync(lambda: send_message(b"" + json.dumps(hostDetails).encode() + b"\n"))  # send off the host details.
-    sched.add_job(lambda: IOLoop.current().run_sync(lambda: send_message(b"" + json.dumps(getUsedRam()).encode() + b"\n")), 'interval', seconds=3)  # yeah this line is lambda hell. There's definitely a better way to do this, but in the interest of time, I'm doing it this way.
+    IOLoop.current().run_sync(lambda: send_message(b"hostDetails#" + json.dumps(hostDetails).encode() + b"\n"))  # send off the host details.
+    sched.add_job(lambda: IOLoop.current().run_sync(lambda: send_message(b"ram#" + json.dumps(getUsedRam()).encode() + b"\n")), 'interval', seconds=3)  # yeah this line is lambda hell. There's definitely a better way to do this, but in the interest of time, I'm doing it this way.
     sched.start()
