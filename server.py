@@ -10,6 +10,7 @@ import tornado
 import ssl
 import os
 import datetime
+
 '''
 https://docs.python.org/3/howto/logging.html#logging-basic-tutorial
 '''
@@ -192,8 +193,10 @@ class EchoServer(TCPServer):
                     yield stream.write(processHostDetails(data[1]))
                 elif data[0] == b"ram":
                     yield stream.write(processRam(data[1]))
+                    l.info("RAM measurement recieved")
                 elif data[0] == b"cpu":
                     yield stream.write(processCpu(data[1]))
+                    l.info("CPU measurement recieved")
                 else:
                     yield stream.write(b"ok\n")
                 if not data[1].endswith(b"\n"):
