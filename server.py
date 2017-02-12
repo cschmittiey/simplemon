@@ -10,6 +10,7 @@ import tornado
 import ssl
 import os
 import datetime
+from apscheduler.schedulers.tornado import TornadoScheduler   # for multiprocess CPU and RAM utilization grabbing
 
 '''
 https://docs.python.org/3/howto/logging.html#logging-basic-tutorial
@@ -60,12 +61,12 @@ def insertNode(uuid, hostname):
         db.commit()
 
 
-def insertService(node, type):
+def insertService(node, serviceType, ipAddress):
     '''
     http://initd.org/psycopg/docs/usage.html
     '''
-    if (isinstance(node, int) and isinstance(type, str)):
-        cur.execute("INSERT INTO services (id, node_id, type) VALUES (DEFAULT, %s, %s)", (node, type))
+    if (isinstance(node, str) and isinstance(serviceType, str) and isinstance(ipAddress, str)):
+        cur.execute("INSERT INTO services (id, node_id, type, ipAddress) VALUES (DEFAULT, %s, %s, %s)", (node, serviceType, ipAddress))
         db.commit()
 
 
@@ -107,7 +108,7 @@ def createTable(arg, carefullyFormattedSqlVariables):
 
 
 createTable("nodes", "(id serial PRIMARY KEY, uuid text UNIQUE, hostname text)")
-createTable("services", "(id serial PRIMARY KEY, node_id int REFERENCES nodes (id) ON DELETE CASCADE, type text)")
+createTable("services", "(id serial PRIMARY KEY, node_id text REFERENCES nodes (uuid) ON DELETE CASCADE, type text, ipAddress text)")
 createTable("ram", "(id serial PRIMARY KEY, node_id text REFERENCES nodes (uuid) ON DELETE CASCADE, measurementTime timestamp, percentage real)")
 createTable("cpu", "(id serial PRIMARY KEY, node_id text REFERENCES nodes (uuid) ON DELETE CASCADE, measurementTime timestamp, percentage real)")
 
@@ -151,7 +152,7 @@ def processHostDetails(data):
         insertNode(hostDetails['id'], hostDetails['hostname'])
         newNodeList.append(hostDetails['id'])
         l.info("Node " + hostDetails['id'] + " " + hostDetails['hostname'] + " added")
-        return(b"Node added\n")
+        return(b"Node " + hostDetails['id'].encode() + b" " + hostDetails['hostname'].encode() + b" added")
 
 
 def processRam(data):
@@ -176,6 +177,24 @@ def processCpu(data):
     return(b'Measurement Added\n')
 
 
+def processService(data):
+    '''
+    let's insert a service!
+    '''
+    l.warn(data[1].decode()[0])
+    if data[1].decode()[0] == '{':
+        response = json.loads(data[1].decode().strip())
+    else:
+        response = data[1].decode().strip()
+    l.warn(response)
+    l.warn(type(response))
+    if isinstance(response, dict):
+        insertService(response['id'], response['serviceType'], response['ipAddress'])
+    else:
+        l.info("Recieved a service#no")
+    return(b"Service information Processed\n")
+
+
 ssl_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
 ssl_ctx.load_cert_chain(os.path.join(os.getcwd(), "server.crt"),
                         os.path.join(os.getcwd(), "server.key"))
@@ -197,10 +216,11 @@ class EchoServer(TCPServer):
                 elif data[0] == b"cpu":
                     yield stream.write(processCpu(data[1]))
                     l.info("CPU measurement recieved")
+                elif data[0] == b"service":
+                    yield stream.write(processService(data))  # We're passing the entirety of `data` here because the function should detect whether we recieve service#no or service#{array of information}
+                    l.info("Service information processed")
                 else:
                     yield stream.write(b"ok\n")
-                if not data[1].endswith(b"\n"):
-                    data = data + b"\n"
             except StreamClosedError:
                 l.debug("Lost client at host %s", address[0])
                 break
@@ -208,8 +228,12 @@ class EchoServer(TCPServer):
                 print(e)
 
 
+print('Press Ctrl+{0} to exit'.format('Break' if os.name == 'nt' else 'C'))
 server = EchoServer(ssl_options=ssl_ctx)
 server.listen(8888)
+
+sched = TornadoScheduler()
+
 tornado.ioloop.IOLoop.current().start()
 
 # Make the changes to the database persistent

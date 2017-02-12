@@ -6,12 +6,14 @@ import uuid         # to distinguish hosts
 from tornado.ioloop import IOLoop  # all the tornado stuff is networking
 from tornado import gen
 from tornado.tcpclient import TCPClient
-import ssl          # for encrypted netwoorking
+import ssl          # for encrypted networking
 import os           # useful for finding current directory across OSes.
 import json         # for encoding network traffic in a sane format
 from apscheduler.schedulers.tornado import TornadoScheduler   # for multiprocess CPU and RAM utilization grabbing
 import psutil       # for getting RAM usage
 import datetime     # for timestamps
+import ipaddress    # for validation of ipadresses
+import configparser  # for config parsing
 
 # Make sure we've got Python 3 here, or else weird errors will happen
 '''
@@ -26,6 +28,9 @@ if cur_version >= req_version:
 else:
     print("Your Python interpreter is too old. Simplemon requires at least Python 3.")
     sys.exit(1)  # Generally used to signify an error has occurred on Unix/POSIX systems.
+
+config = configparser.ConfigParser()
+config.read('client.config.ini')
 
 
 def getProcessor():
@@ -105,6 +110,42 @@ def getUsedCpu():
     l.info(temp)
 
 
+def getServiceDetails():
+    if config['client']['serviceAlreadyConfigured'] == "no":
+        if input("Would you like to configure uptime monitoring of SSH or HTTP services? [y/n] ").startswith("y"):
+            success = False
+            tries = 0
+            while tries < 5 and success is not True:
+                ipAddress = input("Please enter the IP Address the service listens on: ")
+                try:
+                    if ipaddress.ip_address(ipAddress):
+                        success = True
+                except ValueError:
+                    print("Sorry, that doesn't seem to be a proper IP Address. ")
+                    success = False
+                tries = tries + 1
+            serviceType = input("SSH or HTTP? [ssh/http/cancel] ")
+            if serviceType.startswith("s"):
+                serviceType = "ssh"
+            elif serviceType.startswith("h"):
+                serviceType = "http"
+            else:
+                print("Cancelling")
+                return(b"no")
+            tempArray = {}
+            tempArray["serviceType"] = serviceType
+            tempArray["ipAddress"] = ipAddress
+            tempArray["id"] = getID()
+            config['client']['serviceAlreadyConfigured'] = 'yes'
+            cfgfile = open('client.config.ini', 'w')
+            config.write(cfgfile)
+            return(json.dumps(tempArray).encode())
+        else:
+            return(b"no")
+    else:
+        return(b"no")
+
+
 '''
 https://docs.python.org/3/howto/logging.html#logging-basic-tutorial
 '''
@@ -162,12 +203,14 @@ def send_message(stuffToSend):
 
 sched = TornadoScheduler()
 
+
 if __name__ == "__main__":
     '''
     http://stackoverflow.com/questions/3393612/run-certain-code-every-n-seconds
     '''
     send_message(b"hostDetails#" + json.dumps(hostDetails).encode() + b"\n")  # send off the host details.
-    sched.add_job(lambda: send_message(b"ram#" + json.dumps(getUsedRam()).encode() + b"\n"), 'interval', seconds=10)  # yeah this line is lambda hell. There's definitely a better way to do this, but in the interest of time, I'm doing it this way.
+    send_message(b"service#" + getServiceDetails() + b"\n")
+    sched.add_job(lambda: send_message(b"ram#" + json.dumps(getUsedRam()).encode() + b"\n"), 'interval', seconds=10)  # creates a scheduler to send a measurement every 10 seconds.
     sched.add_job(lambda: send_message(b"cpu#" + json.dumps(getUsedCpu()).encode() + b"\n"), 'interval', seconds=10)
     sched.start()
     print('Press Ctrl+{0} to exit'.format('Break' if os.name == 'nt' else 'C'))
