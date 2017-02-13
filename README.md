@@ -12,6 +12,11 @@ Requirements:
 
 ## Initial setup
 
+#### Install python prerequisites
+`pip install -r requirements.txt`
+
+If you're on Linux, you'll want to do that as root.
+
 #### Database Setup
 - Install and configure PostgreSQL.
 - Create a user named `simplemon` with the password `simplepass`
