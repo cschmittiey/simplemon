@@ -127,8 +127,12 @@ def getServiceDetails():
             serviceType = input("SSH or HTTP? [ssh/http/cancel] ")
             if serviceType.startswith("s"):
                 serviceType = "ssh"
+                username = input("Please enter the username to use when connecting: ")
+                password = input("Please enter the password to use when connecting: ")
             elif serviceType.startswith("h"):
                 serviceType = "http"
+                username = ""
+                password = ""
             else:
                 print("Cancelling")
                 return(b"no")
@@ -136,6 +140,8 @@ def getServiceDetails():
             tempArray["serviceType"] = serviceType
             tempArray["ipAddress"] = ipAddress
             tempArray["id"] = getID()
+            tempArray["username"] = username
+            tempArray["password"] = password
             config['client']['serviceAlreadyConfigured'] = 'yes'
             cfgfile = open('client.config.ini', 'w')
             config.write(cfgfile)

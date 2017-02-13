@@ -11,6 +11,8 @@ import ssl
 import os
 import datetime
 from apscheduler.schedulers.tornado import TornadoScheduler   # for multiprocess CPU and RAM utilization grabbing
+import requests
+import paramiko
 
 '''
 https://docs.python.org/3/howto/logging.html#logging-basic-tutorial
@@ -61,12 +63,12 @@ def insertNode(uuid, hostname):
         db.commit()
 
 
-def insertService(node, serviceType, ipAddress):
+def insertService(node, serviceType, ipAddress, username, password):
     '''
     http://initd.org/psycopg/docs/usage.html
     '''
-    if (isinstance(node, str) and isinstance(serviceType, str) and isinstance(ipAddress, str)):
-        cur.execute("INSERT INTO services (id, node_id, type, ipAddress) VALUES (DEFAULT, %s, %s, %s)", (node, serviceType, ipAddress))
+    if (isinstance(node, str) and isinstance(serviceType, str) and isinstance(ipAddress, str) and isinstance(username, str) and isinstance(password, str)):
+        cur.execute("INSERT INTO services (id, node_id, type, ipAddress, username, password) VALUES (DEFAULT, %s, %s, %s, %s, %s)", (node, serviceType, ipAddress, username, password))
         db.commit()
 
 
@@ -85,6 +87,14 @@ def insertMeasurement(table, node, time, measurement):
         else:
             l.warn("Someone's trying to insert data for a node that doesn't exist.")
             l.warn(table + " " + node + " " + time + " " + measurement)
+    elif table == 'servicemeasurements':
+        if node in newNodeList:
+            cur.execute("INSERT INTO servicemeasurements (id, node_id, measurementTime, upOrDown) VALUES (DEFAULT, %s, %s, %s)", (node, time, measurement))
+            db.commit
+        else:
+            l.warn("Someone's trying to insert data for a node that doesn't exist.")
+            l.warn(table + " " + node + " " + time + " " + measurement)
+
     else:
         l.warn("Somone's trying to insert data into a table that doesn't exist.")
         l.warn(table + " " + node + " " + time + " " + str(measurement))
@@ -108,10 +118,10 @@ def createTable(arg, carefullyFormattedSqlVariables):
 
 
 createTable("nodes", "(id serial PRIMARY KEY, uuid text UNIQUE, hostname text)")
-createTable("services", "(id serial PRIMARY KEY, node_id text REFERENCES nodes (uuid) ON DELETE CASCADE, type text, ipAddress text)")
+createTable("services", "(id serial PRIMARY KEY, node_id text REFERENCES nodes (uuid) ON DELETE CASCADE, type text, ipAddress text, username text, password text)")
 createTable("ram", "(id serial PRIMARY KEY, node_id text REFERENCES nodes (uuid) ON DELETE CASCADE, measurementTime timestamp, percentage real)")
 createTable("cpu", "(id serial PRIMARY KEY, node_id text REFERENCES nodes (uuid) ON DELETE CASCADE, measurementTime timestamp, percentage real)")
-
+createTable("servicemeasurements", "(id serial PRIMARY KEY, node_id text REFERENCES nodes (uuid) ON DELETE CASCADE, measurementTime timestamp, upOrDown boolean)")
 
 '''
 I should get a list of nodes already so we don't add a duplicate one below.
@@ -181,18 +191,46 @@ def processService(data):
     '''
     let's insert a service!
     '''
-    l.warn(data[1].decode()[0])
     if data[1].decode()[0] == '{':
         response = json.loads(data[1].decode().strip())
     else:
         response = data[1].decode().strip()
-    l.warn(response)
-    l.warn(type(response))
     if isinstance(response, dict):
-        insertService(response['id'], response['serviceType'], response['ipAddress'])
+        insertService(response['id'], response['serviceType'], response['ipAddress'], response['username'], response['password'])
     else:
         l.info("Recieved a service#no")
     return(b"Service information Processed\n")
+
+
+def checkServices():
+    '''
+    For checking SSH services, we'll use the paramiko library.
+    http://jessenoller.com/blog/2009/02/05/ssh-programming-with-paramiko-completely-different
+
+    For checking HTTP services, we'll use the requests library.
+    http://stackoverflow.com/questions/1140661/what-s-the-best-way-to-get-an-http-response-code-from-a-url
+
+    format of incoming query results:
+    (id, node_id, serviceType, ipAddress, username, password)
+    (1, '8c705a21d8fc', 'http', '127.0.0.1', '', '')
+    '''
+    cur.execute("SELECT * FROM services")
+    services = cur.fetchall()
+    for service in services:
+        if service[2] == 'http':
+            try:
+                r = requests.head("http://stackoverflow.com")
+                insertMeasurement("servicemeasurements", service[1], datetime.datetime.now(), True)
+            except requests.ConnectionError:
+                insertMeasurement("servicemeasurements", service[1], datetime.datetime.now(), False)
+        elif service[2] == 'ssh':
+            ssh = paramiko.SSHClient()
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            try:
+                ssh.connect(service[3], username=service[4], password=service[5])
+                insertMeasurement("servicemeasurements", service[1], datetime.datetime.now(), True)
+            except NoValidConnectionsError:
+                insertMeasurement("servicemeasurements", service[1], datetime.datetime.now(), False)
 
 
 ssl_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
@@ -233,6 +271,9 @@ server = EchoServer(ssl_options=ssl_ctx)
 server.listen(8888)
 
 sched = TornadoScheduler()
+sched.add_job(checkServices, 'interval', seconds=10)
+
+sched.start()
 
 tornado.ioloop.IOLoop.current().start()
 
