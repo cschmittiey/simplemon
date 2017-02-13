@@ -231,6 +231,8 @@ def checkServices():
                 insertMeasurement("servicemeasurements", service[1], datetime.datetime.now(), True)
             except NoValidConnectionsError:
                 insertMeasurement("servicemeasurements", service[1], datetime.datetime.now(), False)
+        else:
+            l.warn("Someone's trying to monitor a service that we don't know how to monitor.")
 
 
 ssl_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
