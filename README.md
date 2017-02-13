@@ -39,6 +39,6 @@ python client.py # most likely in a new window
 
 #### To see what's happening in the database:
 
-The easiest way to poke around in the database to see what's going on is a utility called [PgAdmin](https://www.pgadmin.org/).
+The easiest way to poke around in the database to see what's going on is by using a utility called [PgAdmin](https://www.pgadmin.org/).
 
 Install that, configure it to connect to your server, and take a look around in the tables view.
