@@ -219,7 +219,7 @@ def checkServices():
     for service in services:
         if service[2] == 'http':
             try:
-                r = requests.head("http://stackoverflow.com")
+                r = requests.head("http://" + service[3])
                 insertMeasurement("servicemeasurements", service[1], datetime.datetime.now(), True)
             except requests.ConnectionError:
                 insertMeasurement("servicemeasurements", service[1], datetime.datetime.now(), False)
