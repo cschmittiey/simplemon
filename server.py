@@ -83,14 +83,14 @@ def insertMeasurement(table, node, time, measurement):
     elif table == 'cpu':
         if node in newNodeList:
             cur.execute("INSERT INTO cpu (id, node_id, measurementTime, percentage) VALUES (DEFAULT, %s, %s, %s)", (node, time, measurement))
-            db.commit
+            db.commit()
         else:
             l.warn("Someone's trying to insert data for a node that doesn't exist.")
             l.warn(table + " " + node + " " + time + " " + measurement)
     elif table == 'servicemeasurements':
         if node in newNodeList:
             cur.execute("INSERT INTO servicemeasurements (id, node_id, measurementTime, upOrDown) VALUES (DEFAULT, %s, %s, %s)", (node, time, measurement))
-            db.commit
+            db.commit()
         else:
             l.warn("Someone's trying to insert data for a node that doesn't exist.")
             l.warn(table + " " + node + " " + time + " " + measurement)
