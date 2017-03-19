@@ -118,7 +118,7 @@ def createTable(arg, carefullyFormattedSqlVariables):
 
 
 createTable("nodes", "(id serial PRIMARY KEY, uuid text UNIQUE, hostname text)")
-createTable("services", "(id serial PRIMARY KEY, node_id text REFERENCES nodes (uuid) ON DELETE CASCADE, type text, ipAddress text, username text, password text)")
+createTable("services", "(id serial PRIMARY KEY, node_id text, type text, ipAddress text, username text, password text)")
 createTable("ram", "(id serial PRIMARY KEY, node_id text REFERENCES nodes (uuid) ON DELETE CASCADE, measurementTime timestamp, percentage real)")
 createTable("cpu", "(id serial PRIMARY KEY, node_id text REFERENCES nodes (uuid) ON DELETE CASCADE, measurementTime timestamp, percentage real)")
 createTable("servicemeasurements", "(id serial PRIMARY KEY, node_id text REFERENCES nodes (uuid) ON DELETE CASCADE, measurementTime timestamp, upOrDown boolean)")
